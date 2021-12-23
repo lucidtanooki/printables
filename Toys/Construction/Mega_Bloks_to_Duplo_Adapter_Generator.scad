@@ -2,7 +2,7 @@
 // Mattel Mega Bloks to LEGO Duplo Adapter Generator
 //
 // Author: Georg Eckert (lucidtanooki@magenta.de)
-// Url :
+// Url: https://github.com/lucidtanooki/printables
 //
 // Based on:
 // 
@@ -24,24 +24,28 @@
 
 /* [Main] */
 
-// size along X axis (in studs)
-xSize = 2; // [1:35]
+// Mega studs along X axis.
+xSize = 3; // [1:12]
 
-// size along Y axis (in studs)
-ySize = 4; // [1:35]
+// Mega studs along Y axis.
+ySize = 2; // [1:12]
 
 // (1 = standard brick height, 0.5 = base or cap)
 zSize = 2; // [0.5,1,2,3,4,5]
 
-// brick or a thin base plate
-baseType = 1; // [1:Brick, 2:Base Plate]
+// Brick or thin base plate.
+baseType = 1; // [1: Brick, 2: Base Plate]
 
-// letters or studs on top
-enableStuds = 1; // [0:Letters, 1:Studs]
+// Flat or studs on top.
+enableStuds = 1; // [0: Flat, 1: Studs]
 
 /* [Advanced] */
-// size of a single stud section
+// Size of a single medi stud section.
 baseUnit = 15.75;
+// Size of a single mega stud section.
+megaUnit = 2 * baseUnit;
+// Ridge unit.
+ridgeUnit = baseUnit / 2;
 // standard height of a block (0.1 added to make up for first layer adhesion squish)
 heightUnit = 19.35;
 // vertical walls thickness
@@ -81,11 +85,11 @@ else
 }
         
 
-module CreateBrick( nx, ny, heightfact, enableStuds = true )
+module CreateBrick( xStuds, yStuds, heightfact, enableStuds = true )
 {
     height = heightfact * heightUnit;
-    dx = nx * baseUnit;
-    dy = ny * baseUnit;
+    dx = xStuds * megaUnit;
+    dy = yStuds * megaUnit;
     
     union() 
     {
@@ -104,8 +108,8 @@ module CreateBrick( nx, ny, heightfact, enableStuds = true )
     
         // Studs
         if( enableStuds )
-        for( r = [ 0 : nx - 1 ] )
-        for( c = [ 0 : ny - 1 ] )
+        for( r = [ 0 : xStuds * 2 - 1 ] )
+        for( c = [ 0 : yStuds * 2 - 1 ] )
         {
             CreateStud(
                 baseUnit / 2 + r * baseUnit,
@@ -113,16 +117,16 @@ module CreateBrick( nx, ny, heightfact, enableStuds = true )
                 height,
                 studRadius);
         }
-        
+       
         // Ridges
-        // TODO: For every block
-        CreateRidgeSet( 0,  0,  0,   nx, height);
-        CreateRidgeSet( dx, dy, 180, nx, height);
-        CreateRidgeSet( 0,  dy, -90, ny, height);
-        CreateRidgeSet( dx, 0,  90,  ny, height);
+        for( xMegaStud = [ 0 : xStuds - 1 ] )
+        for( yMegaStud = [ 0 : yStuds - 1 ] )
+        {
+            CreateRidgeSet( xMegaStud, yMegaStud, height);
+        }
         
         // Inner walls
-        CreateInnerWalls( nx, ny, heightfact );
+        CreateInnerWalls( xStuds, yStuds, heightfact );
     }
 }
 
@@ -150,23 +154,24 @@ module CreateBasePlate (nx, ny, height)
 
 module CreateInnerWalls( x, y, z )
 {
+    // <>
     innerWallHeight = z * heightUnit - roofThickness + 0.2;
     
-    if( x % 2 == 0 && x > 2 )
-    for( ix = [ 1 : x / 2 - 1 ] )
+    if( x > 1 )
+    for( ix = [ 1 : x - 1 ] )
     {
-        translate([ ix * 2 * baseUnit - innerWallThickness / 2, wallThickness / 2, 0 ])
+        translate([ ix * megaUnit, y * megaUnit / 2, innerWallHeight / 2 ])
         {
-            cube([ innerWallThickness, y * baseUnit - wallThickness, innerWallHeight ]);
+            cube([ innerWallThickness, y * megaUnit - wallThickness, innerWallHeight ], true );
         }
     }
     
-    if( y % 2 == 0 && y > 2 )
-    for( iy = [ 1 : y / 2 - 1 ] )
+    if( y > 1 )
+    for( iy = [ 1 : y - 1 ] )
     {
-        translate([ wallThickness / 2, iy * 2 * baseUnit - innerWallThickness / 2, 0 ])
+        translate([ x * megaUnit / 2, iy * megaUnit, innerWallHeight / 2 ])
         {
-            cube([ x * baseUnit - wallThickness, innerWallThickness, innerWallHeight ]);
+            cube([ x * megaUnit - wallThickness, innerWallThickness, innerWallHeight ], true );
         }
     }
 }
@@ -195,7 +200,7 @@ module CreateStud(x, y, z, r)
       
            cylinder(
                h = ( studHeight + studGuide ) * 1.5,
-               r1 = r-2.4,
+               r1 = r-1.2,
                r2 = r-1.2,
                center = true,
                $fn = circleResolutionFine );
@@ -204,15 +209,25 @@ module CreateStud(x, y, z, r)
 }
 
 
-module CreateRidgeSet( x, y, angle, n, height )
+module CreateRidgeSet( xStud, yStud, height )
 {
+    x = xStud * megaUnit;
+    y = yStud * megaUnit;
+    
+    angles = [ 0, 90, 180, 270 ];
+    offsets = [[ 0, 0, 0 ],
+               [ 1, 0, 0 ],
+               [ 1, 1, 0 ],
+               [ 0, 1, 0 ]];
+    
+    for( i = [ 0 : 3 ] ){
     translate( [ x, y, 0 ] )
-    rotate( [ 0, 0, angle ] )
+    translate( [ offsets[i].x * megaUnit, offsets[i].y * megaUnit, 0 ] )
+    rotate( [ 0, 0, angles[i]] )
     {
-        for( i = [ 1 : n ] )
+        for( i = [ 1, 3 ] )
         {
-            // Extended Ridge
-            translate( [ ( i * baseUnit - ridgeThickness ) - baseUnit / 2 , 0, 0 ] )
+            translate( [ i * ridgeUnit - ridgeThickness / 2, 0, 0 ] )
             rotate( [ 90, 0, 90 ] )
             {
                 translate( [ wallThickness - 0.2, 0, 0 ] )
@@ -220,18 +235,19 @@ module CreateRidgeSet( x, y, angle, n, height )
                     // standard ridge
                     union ()
                     {
+                        translate([ -0.6, 0, 0 ])
                         cube([
-                            1.2,
+                            1.8,
                             height - roofThickness + 0.2,
                             ridgeThickness ]);
                         
-                        translate([ 1.2, 1.2, 0 ])
+                        translate([ 0.8, 1.2, 0 ])
                         cylinder(
                             r = 1.2,
                             h = ridgeThickness,
                             $fn = circleResolutionCoarse );
                         
-                        translate([ 1.2, 1.2, 0 ])
+                        translate([ 0.8, 1.2, 0 ])
                         cube([
                             1.2,
                             height - roofThickness + 0.2 - 1.2,
@@ -239,20 +255,20 @@ module CreateRidgeSet( x, y, angle, n, height )
                         
                         translate([ 2.2, 8, 0 ])
                         cylinder(
-                            r = 1.5,
+                            r = 1.6,
                             h = ridgeThickness,
                             $fn = circleResolutionCoarse );
                             
-                        translate([ 2.2, 8, 0 ])
+                        translate([ 2, 8, 0 ])
                         cube([
-                            1.5,
+                            1.8,
                             height - roofThickness + 0.2 - 8,
                             ridgeThickness ]);
                     }
                 }
             }
         }
-    }
+    }}
 }
 
 
