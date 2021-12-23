@@ -241,7 +241,7 @@ module CreateRidgeSet( xStud, yStud, height )
                             height - roofThickness + 0.2,
                             ridgeThickness ]);
                         
-                        translate([ 0.8, 1.2, 0 ])
+                        translate([ 0.9, 1.2, 0 ])
                         cylinder(
                             r = 1.2,
                             h = ridgeThickness,
@@ -249,7 +249,7 @@ module CreateRidgeSet( xStud, yStud, height )
                         
                         translate([ 0.8, 1.2, 0 ])
                         cube([
-                            1.2,
+                            1.3,
                             height - roofThickness + 0.2 - 1.2,
                             ridgeThickness ]);
                         
